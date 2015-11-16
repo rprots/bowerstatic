@@ -1,10 +1,18 @@
 CHANGES
 *******
 
-0.9 (unreleased)
+0.10 (unreleased)
+=================
+
+- Do not crash when a version information is missing in bower.json.
+
+
+0.9 (2015-06-23)
 ================
 
 - A few documentation fixes.
+
+- Allow `content_type` of response to be None, e.g. for HTTP-401.
 
 0.8.1 (2015-01-14)
 ==================

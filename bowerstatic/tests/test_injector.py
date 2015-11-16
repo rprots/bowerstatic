@@ -1,8 +1,9 @@
-import bowerstatic
 from webtest import TestApp as Client
+import bowerstatic
+import json
+import mock
 import os
 import pytest
-import json
 
 
 def test_injector_specific_path():
@@ -47,6 +48,31 @@ def test_injector_specific_path_wrong_file():
     c = Client(injector)
 
     c.get('/')
+
+
+def test_injector_does_not_fail_for_401_responses_with_no_content_type():
+    bower = bowerstatic.Bower()
+
+    components = bower.components('components', os.path.join(
+        os.path.dirname(__file__), 'bower_components'))
+
+    def wsgi(environ, start_response):
+        # Can not use 401 here as webtest only accepts 200 or 3xx, which is ok
+        # as we want to test the behaviour if no content type is given
+        start_response('302', [('Content-Type', None)])
+        include = components.includer(environ)
+        with pytest.raises(bowerstatic.Error):
+            include('jquery/nonexistent.js')
+        return [b'<html><head></head><body>Hello!</body></html>']
+
+    injector = bower.injector(wsgi)
+
+    c = Client(injector)
+
+    # webtest checks, in contracy to pyramid, the headers and breaks if one of
+    # them is not a string.
+    with mock.patch('webtest.lint.check_headers'):
+        c.get('/')
 
 
 def test_injector_specific_path_wrong_file_then_added(tmpdir):
@@ -247,6 +273,35 @@ def test_injector_endpoint_depends_on_main_missing():
         b'<html><head><script type="text/javascript" '
         b'src="/bowerstatic/components/depends_on_missing_main/'
         b'2.1.1/resource.js"></script></head><body>Hello!</body></html>')
+
+
+def test_injector_missing_version_bower_components():
+    bower = bowerstatic.Bower()
+
+    components = bower.components('components', os.path.join(
+        os.path.dirname(__file__), 'bower_components'))
+
+    def wsgi(environ, start_response):
+        start_response('200 OK', [('Content-Type', 'text/html;charset=UTF-8')])
+        include = components.includer(environ)
+        include('missing-version-in-dot-bower-json')
+        return [b'<html><head></head><body>Hello!</body></html>']
+
+    injector = bower.injector(wsgi)
+
+    c = Client(injector)
+
+    response = c.get('/')
+
+    # without a main, it should just include nothing
+    assert response.body == (
+        b'<html><head>'
+        b'<script type="text/javascript" '
+        b'src="/bowerstatic/components/missing-version-in-dot-bower-json/'
+        b'1.0/example.js"></script>'
+        b'</head><body>Hello!</body></html>')
+
+
 
 
 def test_injector_endpoint_multiple_mains():

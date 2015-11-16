@@ -9,11 +9,12 @@ tests_require = [
     'pytest >= 2.0',
     'pytest-cov',
     'WebTest >= 2.0.14',
+    'mock',
     ]
 
 setup(
     name='bowerstatic',
-    version='0.9.dev0',
+    version='0.10.dev0',
     description="A Bower-centric static file server for WSGI",
     long_description=long_description,
     author="Martijn Faassen",
